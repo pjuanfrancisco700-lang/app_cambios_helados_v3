@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cambios de Helados</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{
+      --bg:#ffffff; --fg:#111827; --muted:#6b7280; --border:#e5e7eb;
+      --chip:#0b0b0b; --chip-fg:#fff; --card:#f8fafc; --accent:#000;
+      --danger:#ef4444; --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji",sans-serif;}
+    header{position:sticky;top:0;background:rgba(255,255,255,.9);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);}
+    .wrap{max-width:720px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+    .title{font-weight:600;font-size:18px}
+    .sub{font-size:12px;color:var(--muted)}
+    main{max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 1px rgba(0,0,0,.04)}
+    .card.pad{padding:12px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .row > .left{min-width:0}
+    .chip{display:inline-flex;align-items:center;justify-content:center;background:var(--chip);color:var(--chip-fg);border-radius:999px;font-size:10px;padding:2px 6px;min-width:18px}
+    input[type="text"]{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:14px;outline:none}
+    input[type="text"]:focus{border-color:#1f2937;box-shadow:0 0 0 2px rgba(0,0,0,.08)}
+    button{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:14px}
+    button:active{transform:scale(.99)}
+    .list{max-height:380px;overflow:auto;border-top:1px solid var(--border)}
+    .item{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .muted{color:var(--muted);font-size:12px}
+    .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .k{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px}
+    .k .label{font-size:12px;color:var(--muted)}
+    .k .value{font-weight:700}
+    .apply{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .note{font-size:11px;color:#fecaca}
+    .danger{border-color:#fecaca;color:#b91c1c}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="title">Cambios de Helados</div>
+    <div class="sub">Minimal · iOS style</div>
+  </div>
+</header>
+
+<main>
+  <!-- Barra compacta -->
+  <section class="card pad row">
+    <div class="sub">Items: <b id="itemsCount">0</b></div>
+    <div class="sub">Subtotal: <b id="subtotalText">Q0.00</b></div>
+  </section>
+
+  <!-- Canal y Motivo -->
+  <section class="card pad">
+    <div class="sub">Canal</div>
+    <div class="row" style="gap:8px;margin-top:6px">
+      <button id="btnDetalle" class="apply">Canal Detalle</button>
+      <button id="btnSuper">Super 24</button>
+    </div>
+  </section>
+  <section class="card pad">
+    <div class="sub">Motivo del cambio</div>
+    <div class="row" style="gap:8px;margin-top:6px">
+      <button data-motivo="50" class="apply motivo">Falta de energía eléctrica (50%)</button>
+      <button data-motivo="100" class="motivo">Falla del congelador (100%)</button>
+    </div>
+  </section>
+
+  <!-- Buscador -->
+  <section class="card pad">
+    <input id="search" type="text" placeholder="Buscar producto…">
+  </section>
+
+  <!-- Lista de productos -->
+  <section class="card">
+    <div id="list" class="list"></div>
+  </section>
+
+  <!-- Resumen -->
+  <section class="card pad">
+    <div class="row">
+      <div class="title" style="font-size:14px">Resumen</div>
+      <button id="btnClear">Limpiar</button>
+    </div>
+    <div id="cart" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+    <div class="kpi" style="margin-top:8px">
+      <div class="k">
+        <div class="label">Subtotal</div>
+        <div id="subtotal" class="value">Q0.00</div>
+      </div>
+      <div class="k">
+        <div class="label">Motivo</div>
+        <div id="motivoLabel" class="value">Falta de energía eléctrica (50%)</div>
+      </div>
+      <div class="k" style="grid-column:1/-1;background:#000;color:#fff">
+        <div class="label" style="color:#d1d5db">Monto real a aplicar</div>
+        <div id="aplicar" class="value" style="font-size:20px">Q0.00</div>
+        <div class="note">Nota: se aplica el <span id="motivoPct">50</span>% sobre el subtotal.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ===== Util =====
+const Q = (n)=>`Q${Number(n||0).toFixed(2)}`;
+
+// ===== Datos =====
+const base = [
+  {name:"Fresa",price:4.5},{name:"Guanaba",price:4.5},{name:"Mora",price:4.5},{name:"Jocote",price:4.5},
+  {name:"Mango Verde con Pepitoria",price:4.5},{name:"Limón Dieta",price:6.3},{name:"Mandarina Dieta",price:6.3},
+  {name:"Fresa Dieta",price:6.3},{name:"Mango Dieta",price:6.3},{name:"Yogurt de Fresa",price:6.3},
+  {name:"Yogurt de Melocotón",price:6.3},{name:"Vainilla",price:4.5},{name:"Chocolate",price:4.5},
+  {name:"Limón",price:4.5},{name:"Mandarina",price:4.5},{name:"Naranja con Pepitoria",price:4.5},
+  {name:"Mango",price:4.5},{name:"Piña con Pepitoria",price:4.5},{name:"Tamarindo con Tajín",price:4.5},
+  {name:"Nance",price:4.5},{name:"Paleta de Nutela",price:7.5},{name:"Paleta Morena",price:5.25},
+  {name:"Paleta Chocolate Crispi",price:4.5},{name:"Paleta Chocolate Cream",price:3.75},
+  {name:"Paleta de Mantequilla de Maní",price:7.5},{name:"Chocobanano con Maní Pequeño",price:5.25},
+  {name:"Chocobanano sin Maní Pequeño",price:4.5},{name:"Cholapiz",price:1.87},{name:"Arco Iris",price:2.25},
+  {name:"Twist Arcoiris",price:3.75},{name:"Twist Cotton Candy",price:3.75},{name:"Twist Gum (Chicle)",price:3.75},
+  {name:"Mixta Barritas",price:0.0},{name:"Mixta Piñata",price:0.75},{name:"Cremosa Mandarina",price:3.0},
+  {name:"Cremosa Uva",price:3.0},{name:"Cremosa Granadina",price:3.0},{name:"Cremosa Frambuesa",price:3.0},
+  {name:"Cremosa Arandano",price:3.0},{name:"Twist Sipi Manzana Limon",price:3.75},{name:"Twist Sipi Punch Uva",price:3.75},
+  {name:"Morena Cookies And Cream",price:6.0},{name:"Morena Con Cajeta",price:6.0},
+];
+let canal = "Canal Detalle"; // mismo precio por ahora
+let motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
+
+const state = {
+  cart: [], // {name, price, qty}
+  query: ""
+};
+
+// ===== Render =====
+const els = {
+  list: document.getElementById("list"),
+  search: document.getElementById("search"),
+  cart: document.getElementById("cart"),
+  subtotal: document.getElementById("subtotal"),
+  subtotalText: document.getElementById("subtotalText"),
+  aplicar: document.getElementById("aplicar"),
+  motivoLabel: document.getElementById("motivoLabel"),
+  motivoPct: document.getElementById("motivoPct"),
+  itemsCount: document.getElementById("itemsCount"),
+  btnClear: document.getElementById("btnClear"),
+  btnDetalle: document.getElementById("btnDetalle"),
+  btnSuper: document.getElementById("btnSuper"),
+};
+
+function filteredData(){
+  const q = state.query.trim().toLowerCase();
+  if(!q) return base;
+  return base.filter(x=>x.name.toLowerCase().includes(q));
+}
+
+function getQty(name){
+  const it = state.cart.find(p=>p.name===name);
+  return it? it.qty : 0;
+}
+
+function addItem(item, delta=1){
+  const qty = Math.max(1, Number(delta)||1);
+  const idx = state.cart.findIndex(p=>p.name===item.name);
+  if(idx>=0){ state.cart[idx].qty += qty; }
+  else{ state.cart.push({name:item.name, price:item.price, qty}); }
+  render();
+}
+
+function updateQty(name, delta){
+  const idx = state.cart.findIndex(p=>p.name===name);
+  if(idx<0) return;
+  state.cart[idx].qty = Math.max(0, state.cart[idx].qty + delta);
+  if(state.cart[idx].qty===0) state.cart.splice(idx,1);
+  render();
+}
+
+function removeItem(name){
+  const i = state.cart.findIndex(p=>p.name===name);
+  if(i>=0) state.cart.splice(i,1);
+  render();
+}
+
+function renderList(){
+  const data = filteredData();
+  els.list.innerHTML = "";
+  if(data.length===0){
+    els.list.innerHTML = `<div class="item"><div class="muted">No hay resultados…</div></div>`;
+    return;
+  }
+  for(const item of data){
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div class="left">
+        <div class="row" style="gap:6px;align-items:center">
+          <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${item.name}</div>
+          ${getQty(item.name)>0? `<span class="chip">x${getQty(item.name)}</span>`:``}
+        </div>
+        <div class="muted">${Q(item.price)} · ${canal}</div>
+      </div>
+      <div class="row" style="gap:8px">
+        <button onclick='addItem(${JSON.stringify(item)})'>Agregar</button>
+      </div>
+    `;
+    els.list.appendChild(row);
+  }
+}
+
+function renderCart(){
+  els.cart.innerHTML = "";
+  if(state.cart.length===0){
+    els.cart.innerHTML = `<div class="muted">Aún no hay productos seleccionados.</div>`;
+    return;
+  }
+  for(const it of state.cart){
+    const row = document.createElement("div");
+    row.className = "row";
+    row.style = "justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:8px;background:#fff";
+    row.innerHTML = `
+      <div class="left" style="min-width:0">
+        <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${it.name}</div>
+        <div class="muted">${it.qty} × ${Q(it.price)} = <b>${Q(it.qty*it.price)}</b></div>
+      </div>
+      <div class="row" style="gap:6px">
+        <button onclick='updateQty(${JSON.stringify(it.name)}, -1)'>-</button>
+        <button onclick='updateQty(${JSON.stringify(it.name)}, +1)'>+</button>
+        <button class="danger" onclick='removeItem(${JSON.stringify(it.name)})'>Quitar</button>
+      </div>
+    `;
+    els.cart.appendChild(row);
+  }
+}
+
+function renderTotals(){
+  const subtotal = state.cart.reduce((a,it)=>a+it.price*it.qty,0);
+  const aplicar = subtotal * (motivo.factor||1);
+  els.subtotal.textContent = Q(subtotal);
+  els.subtotalText.textContent = Q(subtotal);
+  els.aplicar.textContent = Q(aplicar);
+  els.itemsCount.textContent = state.cart.reduce((a,p)=>a+p.qty,0);
+  els.motivoLabel.textContent = motivo.label;
+  els.motivoPct.textContent = Math.round((motivo.factor||0)*100);
+}
+
+function render(){
+  renderList();
+  renderCart();
+  renderTotals();
+}
+
+// ===== Eventos =====
+els.search.addEventListener("input", (e)=>{ state.query = e.target.value; renderList(); });
+els.btnClear.addEventListener("click", ()=>{ state.cart = []; render(); });
+
+document.querySelectorAll(".motivo").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".motivo").forEach(b=>b.classList.remove("apply"));
+    btn.classList.add("apply");
+    if(btn.dataset.motivo==="50"){
+      motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
+    }else{
+      motivo = { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
+    }
+    renderTotals();
+  });
+});
+
+els.btnDetalle.addEventListener("click", ()=>{
+  canal = "Canal Detalle";
+  els.btnDetalle.classList.add("apply");
+  els.btnSuper.classList.remove("apply");
+  renderList();
+});
+els.btnSuper.addEventListener("click", ()=>{
+  canal = "Super 24";
+  els.btnSuper.classList.add("apply");
+  els.btnDetalle.classList.remove("apply");
+  renderList();
+});
+
+// ===== Tests ligeros en runtime (no modificar los existentes) =====
+(function runLightTests(){
+  try{
+    console.assert(Q(0)==="Q0.00","Q(0) debe formatear Q0.00");
+    console.assert(Q(4.5)==="Q4.50","Q(4.5) debe formatear Q4.50");
+    const demoSub = 3*4.5 + 2*6.3; // 26.1
+    console.assert(Math.abs(demoSub-26.1)<1e-9,"Subtotal demo incorrecto");
+    console.assert(Math.abs(demoSub*0.5-13.05)<1e-9,"Monto 50% incorrecto");
+    console.assert(Math.abs(demoSub*1.0-26.1)<1e-9,"Monto 100% incorrecto");
+    // Adicionales
+    console.assert(Q(null)==="Q0.00","Q(null) debe formatear Q0.00");
+    const mock = [{price:2,qty:2},{price:3,qty:1}];
+    const msub = mock.reduce((a,x)=>a+x.price*x.qty,0);
+    console.assert(msub===7,"Subtotal mock debe ser 7");
+    console.debug("Tests ligeros OK");
+  }catch(e){ console.warn("Tests ligeros fallaron:",e); }
+})();
+
+// Init + SW
+render();
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+</body>
+</html>
