@@ -208,26 +208,27 @@
       <div style="width:48px;height:5px;border-radius:999px;background:#d7d9df;margin:2px auto 14px"></div>
       <div class="row" style="margin-bottom:10px">
         <div>
-          <div class="title" style="font-size:18px">Seleccionar canal</div>
-          <div class="sub">Toca una opción para cambiar precios.</div>
+          <div class="title" style="font-size:18px">Canal y motivo</div>
+          <div class="sub">Selecciona ambos dentro de esta misma ventana.</div>
         </div>
         <button id="btnCloseCanal" type="button">Cerrar</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sub" style="margin-top:2px">Canal</div>
         <button class="canal-option" data-canal="Canal Detalle" type="button" style="width:100%;text-align:left;padding:16px 18px">Canal Detalle</button>
         <button class="canal-option" data-canal="Super 24" type="button" style="width:100%;text-align:left;padding:16px 18px">Super 24</button>
         <button class="canal-option" data-canal="Cruz Verde" type="button" style="width:100%;text-align:left;padding:16px 18px">Cruz Verde</button>
       </div>
+      <div style="height:1px;background:#f0eff4;margin:14px 0"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sub">Motivo del cambio</div>
+        <button data-motivo="50" class="motivo-option" type="button" style="width:100%;text-align:left;padding:16px 18px">Falta de energía eléctrica (50%)</button>
+        <button data-motivo="100" class="motivo-option" type="button" style="width:100%;text-align:left;padding:16px 18px">Falla del congelador (100%)</button>
+      </div>
     </div>
   </div>
 
-  <section class="card pad">
-    <div class="sub">Motivo del cambio</div>
-    <div class="row" style="gap:8px;margin-top:6px">
-      <button data-motivo="50" class="apply motivo" type="button">Falta de energía eléctrica (50%)</button>
-      <button data-motivo="100" class="motivo" type="button">Falla del congelador (100%)</button>
-    </div>
-  </section>
+  
 
   <section class="card pad">
     <input id="search" type="text" placeholder="Buscar producto…">
@@ -380,9 +381,12 @@
     if(ui?.aplicar) ui.aplicar.textContent = Q(aplicar);
     if(ui?.motivoLabel) ui.motivoLabel.textContent = motivo.label;
     if(ui?.motivoPct) ui.motivoPct.textContent = String(Math.round((motivo.factor || 0) * 100));
-    if(ui?.canalActualLabel) ui.canalActualLabel.textContent = canal;
+    if(ui?.canalActualLabel) ui.canalActualLabel.textContent = `${canal} · ${Math.round((motivo.factor || 0) * 100)}%`;
     document.querySelectorAll('.canal-option').forEach((btn) => {
       btn.classList.toggle('apply', btn.dataset.canal === canal);
+    });
+    document.querySelectorAll('.motivo-option').forEach((btn) => {
+      btn.classList.toggle('apply', btn.dataset.motivo === motivo.key);
     });
   }
 
@@ -441,10 +445,8 @@
       render();
     });
 
-    document.querySelectorAll(".motivo").forEach((btn) => {
+        document.querySelectorAll(".motivo-option").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".motivo").forEach((b) => b.classList.remove("apply"));
-        btn.classList.add("apply");
         motivo = btn.dataset.motivo === "50"
           ? { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 }
           : { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
@@ -532,6 +534,9 @@
       canal = "Canal Detalle";
       console.assert(getPrecio({ name:"Fresa", price:4.5 }) === 4.5, "Precio base debe mantenerse cuando no hay override");
       console.assert(requiredElementsPresent() === true, "Los elementos del DOM requeridos deben existir");
+      motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
+      renderTotals();
+      console.assert(ui.canalActualLabel.textContent.includes("Canal Detalle"), "La cabecera debe mostrar el canal actual");
 
       state.cart = [];
       motivo = { key:"100", label:"Falla del congelador (100%)", factor:1 };
