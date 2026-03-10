@@ -34,7 +34,131 @@
 </section>
 </main>
 <script>
-(()=>{let lastTouchEnd=0,canal="Canal Detalle",motivo={key:"50",label:"Falta de energía eléctrica (50%)",factor:.5};const $=id=>document.getElementById(id),Q=n=>`Q${(+n||0).toFixed(2)}`,PRECIOS={"Canal Detalle":{},"Super 24":{},"Cruz Verde":{}},ui={},state={cart:[],query:""},base=[["Fresa",4.5],["Guanaba",4.5],["Mora",4.5],["Jocote",4.5],["Mango Verde con Pepitoria",4.5],["Limón Dieta",6.3],["Mandarina Dieta",6.3],["Fresa Dieta",6.3],["Mango Dieta",6.3],["Yogurt de Fresa",6.3],["Yogurt de Melocotón",6.3],["Vainilla",4.5],["Chocolate",4.5],["Limón",4.5],["Mandarina",4.5],["Naranja con Pepitoria",4.5],["Mango",4.5],["Piña con Pepitoria",4.5],["Tamarindo con Tajín",4.5],["Nance",4.5],["Paleta de Nutela",7.5],["Paleta Morena",5.25],["Paleta Chocolate Crispi",4.5],["Paleta Chocolate Cream",3.75],["Paleta de Mantequilla de Maní",7.5],["Chocobanano con Maní Pequeño",5.25],["Chocobanano sin Maní Pequeño",4.5],["Cholapiz",1.87],["Arco Iris",2.25],["Twist Arcoiris",3.75],["Twist Cotton Candy",3.75],["Twist Gum (Chicle)",3.75],["Mixta Barritas",0],["Mixta Piñata",0.75],["Cremosa Mandarina",3],["Cremosa Uva",3],["Cremosa Granadina",3],["Cremosa Frambuesa",3],["Cremosa Arandano",3],["Twist Sipi Manzana Limon",3.75],["Twist Sipi Punch Uva",3.75],["Morena Cookies And Cream",6],["Morena Con Cajeta",6]].map(([name,price])=>({name,price})),precio=i=>PRECIOS[canal]?.[i.name]??i.price,qty=name=>state.cart.find(i=>i.name===name)?.qty||0,item=name=>base.find(i=>i.name===name),subtotal=()=>state.cart.reduce((a,i)=>a+precio({name:i.name,price:i.priceBase})*i.qty,0),data=()=>{const q=state.query.trim().toLowerCase();return(q?base.filter(i=>i.name.toLowerCase().includes(q)):base).map(i=>({...i,price:precio(i)}))},renderList=()=>ui.list.innerHTML=data().map(i=>{const q=qty(i.name);return `<div class="item"><div class="left"><div class="row" style="gap:6px;align-items:center"><div class="truncate">${i.name}</div>${q?`<span class="chip">x${q}</span>`:""}</div><div class="muted">${Q(i.price)} · ${canal}</div></div><div class="row"><button type="button" data-add="${i.name}">Agregar</button></div></div>`}).join("")||'<div class="item"><div class="muted">No hay resultados…</div></div>',renderCart=()=>ui.cart.innerHTML=state.cart.map(i=>{const p=precio({name:i.name,price:i.priceBase});return `<div class="row cart-row"><div class="left"><div class="truncate">${i.name}</div><div class="muted">${i.qty} × ${Q(p)} = <b>${Q(i.qty*p)}</b></div></div><div class="mini-row"><button type="button" data-dec="${i.name}">-</button><button type="button" data-inc="${i.name}">+</button><button type="button" class="danger" data-remove="${i.name}">Quitar</button></div></div>`}).join("")||'<div class="muted">Aún no hay productos seleccionados.</div>',renderTotals=()=>{const s=subtotal();ui.subtotal.textContent=Q(s);ui.aplicar.textContent=Q(s*motivo.factor);ui.motivoLabel.textContent=motivo.label;ui.motivoPct.textContent=Math.round(motivo.factor*100);ui.canalActualLabel.textContent=`${canal} · ${Math.round(motivo.factor*100)}%`;document.querySelectorAll(".canal-option").forEach(b=>b.classList.toggle("apply",b.dataset.canal===canal));document.querySelectorAll(".motivo-option").forEach(b=>b.classList.toggle("apply",b.dataset.motivo===motivo.key))},render=()=>{renderList();renderCart();renderTotals()},add=i=>{const f=state.cart.find(x=>x.name===i.name);f?f.qty++:state.cart.push({name:i.name,priceBase:i.price,qty:1});render()},update=(name,d)=>{const f=state.cart.find(i=>i.name===name);if(!f)return;f.qty+=d;if(f.qty<=0)state.cart=state.cart.filter(i=>i.name!==name);render()},remove=name=>{state.cart=state.cart.filter(i=>i.name!==name);render()};document.addEventListener("DOMContentLoaded",()=>{document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});Object.assign(ui,{list:$("list"),search:$("search"),cart:$("cart"),subtotal:$("subtotal"),aplicar:$("aplicar"),motivoLabel:$("motivoLabel"),motivoPct:$("motivoPct"),btnClear:$("btnClear"),btnOpenCanal:$("btnOpenCanal"),btnCloseCanal:$("btnCloseCanal"),canalModal:$("canalModal"),canalActualLabel:$("canalActualLabel")});ui.search.addEventListener("input",e=>{state.query=e.target.value;renderList()});ui.btnClear.addEventListener("click",()=>{state.cart=[];render()});ui.btnOpenCanal.addEventListener("click",()=>ui.canalModal.classList.remove("hidden"));ui.btnCloseCanal.addEventListener("click",()=>ui.canalModal.classList.add("hidden"));ui.canalModal.addEventListener("click",e=>e.target===ui.canalModal&&ui.canalModal.classList.add("hidden"));document.querySelectorAll(".canal-option").forEach(b=>b.addEventListener("click",()=>{canal=b.dataset.canal;renderTotals()}));document.querySelectorAll(".motivo-option").forEach(b=>b.addEventListener("click",()=>{motivo=b.dataset.motivo==="50"?{key:"50",label:"Falta de energía eléctrica (50%)",factor:.5}:{key:"100",label:"Falla del congelador (100%)",factor:1};renderTotals();ui.canalModal.classList.add("hidden")}));ui.list.addEventListener("click",e=>{const b=e.target.closest("[data-add]");if(b){const i=item(b.dataset.add);if(i)add(i)}});ui.cart.addEventListener("click",e=>{const d=e.target.closest("[data-dec]"),i=e.target.closest("[data-inc]"),r=e.target.closest("[data-remove]");if(d)update(d.dataset.dec,-1);else if(i)update(i.dataset.inc,1);else if(r)remove(r.dataset.remove)});render();if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"))})})();
+(()=>{
+let lastTouchEnd=0,canal="Canal Detalle",motivo={key:"50",label:"Falta de energía eléctrica (50%)",factor:.5};
+const $=id=>document.getElementById(id),Q=n=>`Q${(+n||0).toFixed(2)}`;
+const PRECIOS={"Canal Detalle":{},"Super 24":{},"Cruz Verde":{}};
+const ui={},state={cart:[],query:""};
+const base=[
+["Fresa",4.5],["Guanaba",4.5],["Mora",4.5],["Jocote",4.5],["Mango Verde con Pepitoria",4.5],["Limón Dieta",6.3],["Mandarina Dieta",6.3],
+["Fresa Dieta",6.3],["Mango Dieta",6.3],["Yogurt de Fresa",6.3],["Yogurt de Melocotón",6.3],["Vainilla",4.5],["Chocolate",4.5],["Limón",4.5],
+["Mandarina",4.5],["Naranja con Pepitoria",4.5],["Mango",4.5],["Piña con Pepitoria",4.5],["Tamarindo con Tajín",4.5],["Nance",4.5],["Paleta de Nutela",7.5],
+["Paleta Morena",5.25],["Paleta Chocolate Crispi",4.5],["Paleta Chocolate Cream",3.75],["Paleta de Mantequilla de Maní",7.5],["Chocobanano con Maní Pequeño",5.25],
+["Chocobanano sin Maní Pequeño",4.5],["Cholapiz",1.87],["Arco Iris",2.25],["Twist Arcoiris",3.75],["Twist Cotton Candy",3.75],["Twist Gum (Chicle)",3.75],
+["Mixta Barritas",0],["Mixta Piñata",0.75],["Cremosa Mandarina",3],["Cremosa Uva",3],["Cremosa Granadina",3],["Cremosa Frambuesa",3],["Cremosa Arandano",3],
+["Twist Sipi Manzana Limon",3.75],["Twist Sipi Punch Uva",3.75],["Morena Cookies And Cream",6],["Morena Con Cajeta",6]
+].map(([name,price])=>({name,price}));
+
+const precio=i=>PRECIOS[canal]?.[i.name]??i.price;
+const qty=name=>state.cart.find(i=>i.name===name)?.qty||0;
+const item=name=>base.find(i=>i.name===name);
+const subtotal=()=>state.cart.reduce((a,i)=>a+precio({name:i.name,price:i.priceBase})*i.qty,0);
+const data=()=>{const q=state.query.trim().toLowerCase();return(q?base.filter(i=>i.name.toLowerCase().includes(q)):base).map(i=>({...i,price:precio(i)}))};
+
+function renderList(){
+  ui.list.innerHTML=data().map(i=>{
+    const q=qty(i.name);
+    return `<div class="item" data-name="${i.name}"><div class="left"><div class="row" style="gap:6px;align-items:center"><div class="truncate">${i.name}</div>${q?`<span class="chip" data-chip="${i.name}">x${q}</span>`:""}</div><div class="muted">${Q(i.price)} · ${canal}</div></div><div class="row"><button type="button" data-add="${i.name}">Agregar</button></div></div>`
+  }).join("")||'<div class="item"><div class="muted">No hay resultados…</div></div>';
+}
+
+function renderCart(){
+  ui.cart.innerHTML=state.cart.map(i=>{
+    const p=precio({name:i.name,price:i.priceBase});
+    return `<div class="row cart-row"><div class="left"><div class="truncate">${i.name}</div><div class="muted">${i.qty} × ${Q(p)} = <b>${Q(i.qty*p)}</b></div></div><div class="mini-row"><button type="button" data-dec="${i.name}">-</button><button type="button" data-inc="${i.name}">+</button><button type="button" class="danger" data-remove="${i.name}">Quitar</button></div></div>`
+  }).join("")||'<div class="muted">Aún no hay productos seleccionados.</div>';
+}
+
+function renderTotals(){
+  const s=subtotal();
+  ui.subtotal.textContent=Q(s);
+  ui.aplicar.textContent=Q(s*motivo.factor);
+  ui.motivoLabel.textContent=motivo.label;
+  ui.motivoPct.textContent=Math.round(motivo.factor*100);
+  ui.canalActualLabel.textContent=`${canal} · ${Math.round(motivo.factor*100)}%`;
+  document.querySelectorAll(".canal-option").forEach(b=>b.classList.toggle("apply",b.dataset.canal===canal));
+  document.querySelectorAll(".motivo-option").forEach(b=>b.classList.toggle("apply",b.dataset.motivo===motivo.key));
+}
+
+function syncListQty(name){
+  const row=ui.list.querySelector(`[data-name="${CSS.escape(name)}"]`);
+  if(!row) return;
+  const head=row.querySelector(".left .row");
+  if(!head) return;
+  let chip=head.querySelector(`[data-chip="${CSS.escape(name)}"]`);
+  const q=qty(name);
+  if(q<=0){ if(chip) chip.remove(); return; }
+  if(!chip){
+    chip=document.createElement("span");
+    chip.className="chip";
+    chip.dataset.chip=name;
+    head.appendChild(chip);
+  }
+  chip.textContent=`x${q}`;
+}
+
+function renderAll(){ renderList(); renderCart(); renderTotals(); }
+function renderFast(name){ syncListQty(name); renderCart(); renderTotals(); }
+
+function add(name){
+  const i=item(name);
+  if(!i) return;
+  const f=state.cart.find(x=>x.name===name);
+  f?f.qty++:state.cart.push({name:i.name,priceBase:i.price,qty:1});
+  renderFast(name);
+}
+
+function update(name,d){
+  const f=state.cart.find(i=>i.name===name);
+  if(!f) return;
+  f.qty+=d;
+  if(f.qty<=0) state.cart=state.cart.filter(i=>i.name!==name);
+  renderFast(name);
+}
+
+function remove(name){
+  state.cart=state.cart.filter(i=>i.name!==name);
+  renderFast(name);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.addEventListener("touchend",e=>{
+    const now=Date.now();
+    if(now-lastTouchEnd<=300) e.preventDefault();
+    lastTouchEnd=now;
+  },{passive:false});
+
+  Object.assign(ui,{list:$("list"),search:$("search"),cart:$("cart"),subtotal:$("subtotal"),aplicar:$("aplicar"),motivoLabel:$("motivoLabel"),motivoPct:$("motivoPct"),btnClear:$("btnClear"),btnOpenCanal:$("btnOpenCanal"),btnCloseCanal:$("btnCloseCanal"),canalModal:$("canalModal"),canalActualLabel:$("canalActualLabel")});
+
+  ui.search.addEventListener("input",e=>{state.query=e.target.value;renderList()});
+  ui.btnClear.addEventListener("click",()=>{state.cart=[];renderAll()});
+  ui.btnOpenCanal.addEventListener("click",()=>ui.canalModal.classList.remove("hidden"));
+  ui.btnCloseCanal.addEventListener("click",()=>ui.canalModal.classList.add("hidden"));
+  ui.canalModal.addEventListener("click",e=>e.target===ui.canalModal&&ui.canalModal.classList.add("hidden"));
+
+  document.querySelectorAll(".canal-option").forEach(b=>b.addEventListener("click",()=>{canal=b.dataset.canal;renderAll()}));
+  document.querySelectorAll(".motivo-option").forEach(b=>b.addEventListener("click",()=>{
+    motivo=b.dataset.motivo==="50"?{key:"50",label:"Falta de energía eléctrica (50%)",factor:.5}:{key:"100",label:"Falla del congelador (100%)",factor:1};
+    renderTotals();
+    ui.canalModal.classList.add("hidden");
+  }));
+
+  ui.list.addEventListener("click",e=>{
+    const b=e.target.closest("[data-add]");
+    if(b) add(b.dataset.add);
+  });
+
+  ui.cart.addEventListener("click",e=>{
+    const d=e.target.closest("[data-dec]"),i=e.target.closest("[data-inc]"),r=e.target.closest("[data-remove]");
+    if(d) update(d.dataset.dec,-1);
+    else if(i) update(i.dataset.inc,1);
+    else if(r) remove(r.dataset.remove);
+  });
+
+  renderAll();
+  if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
+});
+})();
 </script>
 </body>
 </html>
