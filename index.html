@@ -53,6 +53,7 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
+      min-height:20px;
     }
     .title{
       font-weight:800;
@@ -126,20 +127,35 @@
     }
     button:active{transform:scale(.985)}
     .list{
-      max-height:420px;
-      overflow:auto;
+      height:min(52svh, 460px);
+      overflow-y:auto;
+      overflow-x:hidden;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
       border-top:1px solid transparent;
       padding:4px 0;
     }
     .item{
       padding:14px 16px;
       border-bottom:1px solid #f0eff4;
-      display:flex;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
       align-items:center;
-      justify-content:space-between;
       gap:10px;
     }
     .item:last-child{border-bottom:0}
+    .item .left{min-width:0}
+    .item button{flex-shrink:0;white-space:nowrap}
+    @media (max-width:640px){
+      .item{
+        grid-template-columns:minmax(0,1fr);
+        align-items:flex-start;
+      }
+      .item > .row{
+        width:100%;
+        justify-content:flex-end;
+      }
+    }
     .muted{color:var(--muted);font-size:12px;font-weight:500}
     .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .k{
@@ -181,11 +197,6 @@
 </header>
 
 <main>
-  <section class="card pad row">
-    <div class="sub">Items: <b id="itemsCount">0</b></div>
-    <div class="sub">Subtotal: <b id="subtotalText">Q0.00</b></div>
-  </section>
-
   <section class="card pad">
     <div class="sub">Canal</div>
     <button id="btnOpenCanal" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:20px;border:2px solid #d9dde5;background:#fff">
@@ -253,246 +264,323 @@
 </main>
 
 <script>
-let lastTouchEnd = 0;
-document.addEventListener("touchend", (e)=>{
-  const now = Date.now();
-  if(now - lastTouchEnd <= 300){
-    e.preventDefault();
-  }
-  lastTouchEnd = now;
-}, { passive:false });
+(function(){
+  let lastTouchEnd = 0;
 
-const Q = (n)=>`Q${Number(n||0).toFixed(2)}`;
+  const Q = (n) => `Q${Number(n || 0).toFixed(2)}`;
 
-const PRECIOS_POR_CANAL = {
-  "Canal Detalle": {
-    // "Fresa": 4.5,
-    // "Guanaba": 4.5,
-  },
-  "Super 24": {
-    // "Fresa": 5.0,
-    // "Guanaba": 5.0,
-  },
-  "Cruz Verde": {
-    // "Fresa": 5.25,
-    // "Guanaba": 5.25,
-  }
-};
-
-const base = [
-  {name:"Fresa",price:4.5},{name:"Guanaba",price:4.5},{name:"Mora",price:4.5},{name:"Jocote",price:4.5},
-  {name:"Mango Verde con Pepitoria",price:4.5},{name:"Limón Dieta",price:6.3},{name:"Mandarina Dieta",price:6.3},
-  {name:"Fresa Dieta",price:6.3},{name:"Mango Dieta",price:6.3},{name:"Yogurt de Fresa",price:6.3},
-  {name:"Yogurt de Melocotón",price:6.3},{name:"Vainilla",price:4.5},{name:"Chocolate",price:4.5},
-  {name:"Limón",price:4.5},{name:"Mandarina",price:4.5},{name:"Naranja con Pepitoria",price:4.5},
-  {name:"Mango",price:4.5},{name:"Piña con Pepitoria",price:4.5},{name:"Tamarindo con Tajín",price:4.5},
-  {name:"Nance",price:4.5},{name:"Paleta de Nutela",price:7.5},{name:"Paleta Morena",price:5.25},
-  {name:"Paleta Chocolate Crispi",price:4.5},{name:"Paleta Chocolate Cream",price:3.75},
-  {name:"Paleta de Mantequilla de Maní",price:7.5},{name:"Chocobanano con Maní Pequeño",price:5.25},
-  {name:"Chocobanano sin Maní Pequeño",price:4.5},{name:"Cholapiz",price:1.87},{name:"Arco Iris",price:2.25},
-  {name:"Twist Arcoiris",price:3.75},{name:"Twist Cotton Candy",price:3.75},{name:"Twist Gum (Chicle)",price:3.75},
-  {name:"Mixta Barritas",price:0.0},{name:"Mixta Piñata",price:0.75},{name:"Cremosa Mandarina",price:3.0},
-  {name:"Cremosa Uva",price:3.0},{name:"Cremosa Granadina",price:3.0},{name:"Cremosa Frambuesa",price:3.0},
-  {name:"Cremosa Arandano",price:3.0},{name:"Twist Sipi Manzana Limon",price:3.75},{name:"Twist Sipi Punch Uva",price:3.75},
-  {name:"Morena Cookies And Cream",price:6.0},{name:"Morena Con Cajeta",price:6.0},
-];
-
-let canal = "Canal Detalle";
-let motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
-
-const state = {
-  cart: [],
-  query: ""
-};
-
-const els = {
-  list: document.getElementById("list"),
-  search: document.getElementById("search"),
-  cart: document.getElementById("cart"),
-  subtotal: document.getElementById("subtotal"),
-  subtotalText: document.getElementById("subtotalText"),
-  aplicar: document.getElementById("aplicar"),
-  motivoLabel: document.getElementById("motivoLabel"),
-  motivoPct: document.getElementById("motivoPct"),
-  itemsCount: document.getElementById("itemsCount"),
-  btnClear: document.getElementById("btnClear"),
-  btnOpenCanal: document.getElementById("btnOpenCanal"),
-  btnCloseCanal: document.getElementById("btnCloseCanal"),
-  canalModal: document.getElementById("canalModal"),
-  canalActualLabel: document.getElementById("canalActualLabel"),
-};
-
-function getPrecio(item){
-  return PRECIOS_POR_CANAL[canal]?.[item.name] ?? item.price;
-}
-
-function filteredData(){
-  const q = state.query.trim().toLowerCase();
-  const data = !q ? base : base.filter(x=>x.name.toLowerCase().includes(q));
-  return data.map(item => ({ ...item, price: getPrecio(item) }));
-}
-
-function getQty(name){
-  const it = state.cart.find(p=>p.name===name);
-  return it ? it.qty : 0;
-}
-
-function addItem(item, delta=1){
-  const qty = Math.max(1, Number(delta)||1);
-  const idx = state.cart.findIndex(p=>p.name===item.name);
-  if(idx>=0){
-    state.cart[idx].qty += qty;
-  }else{
-    state.cart.push({name:item.name, priceBase:item.price, qty});
-  }
-  render();
-}
-
-function updateQty(name, delta){
-  const idx = state.cart.findIndex(p=>p.name===name);
-  if(idx<0) return;
-  state.cart[idx].qty = Math.max(0, state.cart[idx].qty + delta);
-  if(state.cart[idx].qty===0) state.cart.splice(idx,1);
-  render();
-}
-
-function removeItem(name){
-  const i = state.cart.findIndex(p=>p.name===name);
-  if(i>=0) state.cart.splice(i,1);
-  render();
-}
-
-function renderList(){
-  const data = filteredData();
-  els.list.innerHTML = "";
-  if(data.length===0){
-    els.list.innerHTML = `<div class="item"><div class="muted">No hay resultados…</div></div>`;
-    return;
-  }
-  for(const item of data){
-    const row = document.createElement("div");
-    row.className = "item";
-    row.innerHTML = `
-      <div class="left">
-        <div class="row" style="gap:6px;align-items:center">
-          <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${item.name}</div>
-          ${getQty(item.name)>0 ? `<span class="chip">x${getQty(item.name)}</span>` : ``}
-        </div>
-        <div class="muted">${Q(item.price)} · ${canal}</div>
-      </div>
-      <div class="row" style="gap:8px">
-        <button onclick='addItem(${JSON.stringify(item)})'>Agregar</button>
-      </div>
-    `;
-    els.list.appendChild(row);
-  }
-}
-
-function renderCart(){
-  els.cart.innerHTML = "";
-  if(state.cart.length===0){
-    els.cart.innerHTML = `<div class="muted">Aún no hay productos seleccionados.</div>`;
-    return;
-  }
-  for(const it of state.cart){
-    const precioActual = getPrecio({ name: it.name, price: it.priceBase });
-    const row = document.createElement("div");
-    row.className = "row";
-    row.style = "justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:8px;background:#fff";
-    row.innerHTML = `
-      <div class="left" style="min-width:0">
-        <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${it.name}</div>
-        <div class="muted">${it.qty} × ${Q(precioActual)} = <b>${Q(it.qty*precioActual)}</b></div>
-      </div>
-      <div class="row" style="gap:6px">
-        <button onclick='updateQty(${JSON.stringify(it.name)}, -1)'>-</button>
-        <button onclick='updateQty(${JSON.stringify(it.name)}, +1)'>+</button>
-        <button class="danger" onclick='removeItem(${JSON.stringify(it.name)})'>Quitar</button>
-      </div>
-    `;
-    els.cart.appendChild(row);
-  }
-}
-
-function renderTotals(){
-  const subtotal = state.cart.reduce((a,it)=>a+getPrecio({ name: it.name, price: it.priceBase })*it.qty,0);
-  const aplicar = subtotal * (motivo.factor||1);
-  els.subtotal.textContent = Q(subtotal);
-  els.subtotalText.textContent = Q(subtotal);
-  els.aplicar.textContent = Q(aplicar);
-  els.itemsCount.textContent = state.cart.reduce((a,p)=>a+p.qty,0);
-  els.motivoLabel.textContent = motivo.label;
-  els.motivoPct.textContent = Math.round((motivo.factor||0)*100);
-  els.canalActualLabel.textContent = canal;
-  document.querySelectorAll('.canal-option').forEach(btn=>{
-    btn.classList.toggle('apply', btn.dataset.canal === canal);
-  });
-}
-
-function render(){
-  renderList();
-  renderCart();
-  renderTotals();
-}
-
-els.search.addEventListener("input", (e)=>{ state.query = e.target.value; renderList(); });
-els.btnClear.addEventListener("click", ()=>{ state.cart = []; render(); });
-
-document.querySelectorAll(".motivo").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".motivo").forEach(b=>b.classList.remove("apply"));
-    btn.classList.add("apply");
-    if(btn.dataset.motivo==="50"){
-      motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
-    }else{
-      motivo = { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
+  const PRECIOS_POR_CANAL = {
+    "Canal Detalle": {
+      // "Fresa": 4.5,
+      // "Guanaba": 4.5,
+    },
+    "Super 24": {
+      // "Fresa": 5.0,
+      // "Guanaba": 5.0,
+    },
+    "Cruz Verde": {
+      // "Fresa": 5.25,
+      // "Guanaba": 5.25,
     }
-    renderTotals();
-  });
-});
+  };
 
-els.btnOpenCanal.addEventListener("click", ()=>{
-  els.canalModal.classList.remove("hidden");
-});
+  const base = [
+    {name:"Fresa",price:4.5},{name:"Guanaba",price:4.5},{name:"Mora",price:4.5},{name:"Jocote",price:4.5},
+    {name:"Mango Verde con Pepitoria",price:4.5},{name:"Limón Dieta",price:6.3},{name:"Mandarina Dieta",price:6.3},
+    {name:"Fresa Dieta",price:6.3},{name:"Mango Dieta",price:6.3},{name:"Yogurt de Fresa",price:6.3},
+    {name:"Yogurt de Melocotón",price:6.3},{name:"Vainilla",price:4.5},{name:"Chocolate",price:4.5},
+    {name:"Limón",price:4.5},{name:"Mandarina",price:4.5},{name:"Naranja con Pepitoria",price:4.5},
+    {name:"Mango",price:4.5},{name:"Piña con Pepitoria",price:4.5},{name:"Tamarindo con Tajín",price:4.5},
+    {name:"Nance",price:4.5},{name:"Paleta de Nutela",price:7.5},{name:"Paleta Morena",price:5.25},
+    {name:"Paleta Chocolate Crispi",price:4.5},{name:"Paleta Chocolate Cream",price:3.75},
+    {name:"Paleta de Mantequilla de Maní",price:7.5},{name:"Chocobanano con Maní Pequeño",price:5.25},
+    {name:"Chocobanano sin Maní Pequeño",price:4.5},{name:"Cholapiz",price:1.87},{name:"Arco Iris",price:2.25},
+    {name:"Twist Arcoiris",price:3.75},{name:"Twist Cotton Candy",price:3.75},{name:"Twist Gum (Chicle)",price:3.75},
+    {name:"Mixta Barritas",price:0.0},{name:"Mixta Piñata",price:0.75},{name:"Cremosa Mandarina",price:3.0},
+    {name:"Cremosa Uva",price:3.0},{name:"Cremosa Granadina",price:3.0},{name:"Cremosa Frambuesa",price:3.0},
+    {name:"Cremosa Arandano",price:3.0},{name:"Twist Sipi Manzana Limon",price:3.75},{name:"Twist Sipi Punch Uva",price:3.75},
+    {name:"Morena Cookies And Cream",price:6.0},{name:"Morena Con Cajeta",price:6.0},
+  ];
 
-els.btnCloseCanal.addEventListener("click", ()=>{
-  els.canalModal.classList.add("hidden");
-});
+  let canal = "Canal Detalle";
+  let motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
 
-els.canalModal.addEventListener("click", (e)=>{
-  if(e.target === els.canalModal){
-    els.canalModal.classList.add("hidden");
+  const state = {
+    cart: [],
+    query: ""
+  };
+
+  function getPrecio(item){
+    return PRECIOS_POR_CANAL[canal]?.[item.name] ?? item.price;
   }
-});
 
-document.querySelectorAll(".canal-option").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    canal = btn.dataset.canal;
-    els.canalModal.classList.add("hidden");
+  function getSubtotal(){
+    return state.cart.reduce((a,it)=>a + getPrecio({ name: it.name, price: it.priceBase }) * it.qty, 0);
+  }
+
+  function filteredData(){
+    const q = state.query.trim().toLowerCase();
+    const data = !q ? base : base.filter(x => x.name.toLowerCase().includes(q));
+    return data.map(item => ({ ...item, price: getPrecio(item) }));
+  }
+
+  function getQty(name){
+    const it = state.cart.find(p => p.name === name);
+    return it ? it.qty : 0;
+  }
+
+  function addItem(item, delta = 1){
+    const qty = Math.max(1, Number(delta) || 1);
+    const idx = state.cart.findIndex(p => p.name === item.name);
+    if(idx >= 0){
+      state.cart[idx].qty += qty;
+    }else{
+      state.cart.push({ name: item.name, priceBase: item.price, qty });
+    }
     render();
+  }
+
+  function updateQty(name, delta){
+    const idx = state.cart.findIndex(p => p.name === name);
+    if(idx < 0) return;
+    state.cart[idx].qty = Math.max(0, state.cart[idx].qty + delta);
+    if(state.cart[idx].qty === 0) state.cart.splice(idx, 1);
+    render();
+  }
+
+  function removeItem(name){
+    const i = state.cart.findIndex(p => p.name === name);
+    if(i >= 0) state.cart.splice(i, 1);
+    render();
+  }
+
+  function renderList(els){
+    const data = filteredData();
+    els.list.innerHTML = "";
+    if(data.length === 0){
+      els.list.innerHTML = `<div class="item"><div class="muted">No hay resultados…</div></div>`;
+      return;
+    }
+    for(const item of data){
+      const row = document.createElement("div");
+      row.className = "item";
+      row.innerHTML = `
+        <div class="left">
+          <div class="row" style="gap:6px;align-items:center">
+            <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${item.name}</div>
+            ${getQty(item.name) > 0 ? `<span class="chip">x${getQty(item.name)}</span>` : ``}
+          </div>
+          <div class="muted">${Q(item.price)} · ${canal}</div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button type="button" data-add="${item.name}">Agregar</button>
+        </div>
+      `;
+      els.list.appendChild(row);
+    }
+  }
+
+  function renderCart(els){
+    els.cart.innerHTML = "";
+    if(state.cart.length === 0){
+      els.cart.innerHTML = `<div class="muted">Aún no hay productos seleccionados.</div>`;
+      return;
+    }
+    for(const it of state.cart){
+      const precioActual = getPrecio({ name: it.name, price: it.priceBase });
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.cssText = "justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:8px;background:#fff";
+      row.innerHTML = `
+        <div class="left" style="min-width:0">
+          <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56vw">${it.name}</div>
+          <div class="muted">${it.qty} × ${Q(precioActual)} = <b>${Q(it.qty * precioActual)}</b></div>
+        </div>
+        <div class="row" style="gap:6px">
+          <button type="button" data-dec="${it.name}">-</button>
+          <button type="button" data-inc="${it.name}">+</button>
+          <button type="button" class="danger" data-remove="${it.name}">Quitar</button>
+        </div>
+      `;
+      els.cart.appendChild(row);
+    }
+  }
+
+  function renderTotals(els){
+    const subtotal = getSubtotal();
+    const aplicar = subtotal * (motivo.factor || 1);
+    if(els.subtotal) els.subtotal.textContent = Q(subtotal);
+    if(els.aplicar) els.aplicar.textContent = Q(aplicar);
+    if(els.motivoLabel) els.motivoLabel.textContent = motivo.label;
+    if(els.motivoPct) els.motivoPct.textContent = Math.round((motivo.factor || 0) * 100);
+    if(els.canalActualLabel) els.canalActualLabel.textContent = canal;
+    document.querySelectorAll('.canal-option').forEach(btn => {
+      btn.classList.toggle('apply', btn.dataset.canal === canal);
+    });
+  }
+
+  function render(els){
+    renderList(els);
+    renderCart(els);
+    renderTotals(els);
+  }
+
+  function getBaseItemByName(name){
+    return base.find(item => item.name === name) || null;
+  }
+
+  function runLightTests(){
+    try{
+      console.assert(Q(0) === "Q0.00", "Q(0) debe formatear Q0.00");
+      console.assert(Q(4.5) === "Q4.50", "Q(4.5) debe formatear Q4.50");
+      console.assert(Q(null) === "Q0.00", "Q(null) debe formatear Q0.00");
+      console.assert(Q("7.1") === "Q7.10", "Q('7.1') debe formatear Q7.10");
+
+      const demoSub = 3 * 4.5 + 2 * 6.3;
+      console.assert(Math.abs(demoSub - 26.1) < 1e-9, "Subtotal demo incorrecto");
+      console.assert(Math.abs(demoSub * 0.5 - 13.05) < 1e-9, "Monto 50% incorrecto");
+      console.assert(Math.abs(demoSub * 1.0 - 26.1) < 1e-9, "Monto 100% incorrecto");
+
+      const mock = [{price:2,qty:2},{price:3,qty:1}];
+      const msub = mock.reduce((a,x) => a + x.price * x.qty, 0);
+      console.assert(msub === 7, "Subtotal mock debe ser 7");
+
+      state.cart = [];
+      addItem({ name:"Fresa", price:4.5 }, 2);
+      console.assert(getQty("Fresa") === 2, "Debe agregar 2 Fresa");
+      updateQty("Fresa", -1);
+      console.assert(getQty("Fresa") === 1, "Debe disminuir 1 Fresa");
+      removeItem("Fresa");
+      console.assert(getQty("Fresa") === 0, "Debe quitar Fresa del carrito");
+
+      state.query = "mango";
+      console.assert(filteredData().some(x => x.name.toLowerCase().includes("mango")), "El filtro debe devolver productos con mango");
+      state.query = "";
+
+      canal = "Canal Detalle";
+      console.assert(getPrecio({ name:"Fresa", price:4.5 }) === 4.5, "Precio base debe mantenerse cuando no hay override");
+
+      state.cart = [];
+      console.debug("Tests ligeros OK");
+    }catch(e){
+      console.warn("Tests ligeros fallaron:", e);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      if(now - lastTouchEnd <= 300){
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive:false });
+
+    const els = {
+      list: document.getElementById("list"),
+      search: document.getElementById("search"),
+      cart: document.getElementById("cart"),
+      subtotal: document.getElementById("subtotal"),
+      aplicar: document.getElementById("aplicar"),
+      motivoLabel: document.getElementById("motivoLabel"),
+      motivoPct: document.getElementById("motivoPct"),
+      btnClear: document.getElementById("btnClear"),
+      btnOpenCanal: document.getElementById("btnOpenCanal"),
+      btnCloseCanal: document.getElementById("btnCloseCanal"),
+      canalModal: document.getElementById("canalModal"),
+      canalActualLabel: document.getElementById("canalActualLabel"),
+    };
+
+    if(!els.list || !els.search || !els.cart || !els.subtotal || !els.aplicar || !els.motivoLabel || !els.motivoPct || !els.btnClear || !els.btnOpenCanal || !els.btnCloseCanal || !els.canalModal || !els.canalActualLabel){
+      console.error("Faltan elementos del DOM requeridos para iniciar la app.");
+      return;
+    }
+
+    window.addItem = addItem;
+    window.updateQty = updateQty;
+    window.removeItem = removeItem;
+
+    els.search.addEventListener("input", (e) => {
+      state.query = e.target.value;
+      renderList(els);
+    });
+
+    els.btnClear.addEventListener("click", () => {
+      state.cart = [];
+      render(els);
+    });
+
+    document.querySelectorAll(".motivo").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".motivo").forEach(b => b.classList.remove("apply"));
+        btn.classList.add("apply");
+        if(btn.dataset.motivo === "50"){
+          motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
+        }else{
+          motivo = { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
+        }
+        renderTotals(els);
+      });
+    });
+
+    els.btnOpenCanal.addEventListener("click", () => {
+      els.canalModal.classList.remove("hidden");
+    });
+
+    els.btnCloseCanal.addEventListener("click", () => {
+      els.canalModal.classList.add("hidden");
+    });
+
+    els.canalModal.addEventListener("click", (e) => {
+      if(e.target === els.canalModal){
+        els.canalModal.classList.add("hidden");
+      }
+    });
+
+    document.querySelectorAll(".canal-option").forEach(btn => {
+      btn.addEventListener("click", () => {
+        canal = btn.dataset.canal;
+        els.canalModal.classList.add("hidden");
+        render(els);
+      });
+    });
+
+    els.list.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-add]");
+      if(!btn) return;
+      const item = getBaseItemByName(btn.dataset.add);
+      if(item) addItem(item, 1);
+      render(els);
+    });
+
+    els.cart.addEventListener("click", (e) => {
+      const decBtn = e.target.closest("button[data-dec]");
+      if(decBtn){
+        updateQty(decBtn.dataset.dec, -1);
+        render(els);
+        return;
+      }
+      const incBtn = e.target.closest("button[data-inc]");
+      if(incBtn){
+        updateQty(incBtn.dataset.inc, 1);
+        render(els);
+        return;
+      }
+      const removeBtn = e.target.closest("button[data-remove]");
+      if(removeBtn){
+        removeItem(removeBtn.dataset.remove);
+        render(els);
+      }
+    });
+
+    render(els);
+    runLightTests();
+
+    if("serviceWorker" in navigator){
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+    }
   });
-});
-
-(function runLightTests(){
-  try{
-    console.assert(Q(0)==="Q0.00","Q(0) debe formatear Q0.00");
-    console.assert(Q(4.5)==="Q4.50","Q(4.5) debe formatear Q4.50");
-    const demoSub = 3*4.5 + 2*6.3;
-    console.assert(Math.abs(demoSub-26.1)<1e-9,"Subtotal demo incorrecto");
-    console.assert(Math.abs(demoSub*0.5-13.05)<1e-9,"Monto 50% incorrecto");
-    console.assert(Math.abs(demoSub*1.0-26.1)<1e-9,"Monto 100% incorrecto");
-    console.assert(Q(null)==="Q0.00","Q(null) debe formatear Q0.00");
-    const mock = [{price:2,qty:2},{price:3,qty:1}];
-    const msub = mock.reduce((a,x)=>a+x.price*x.qty,0);
-    console.assert(msub===7,"Subtotal mock debe ser 7");
-    console.debug("Tests ligeros OK");
-  }catch(e){ console.warn("Tests ligeros fallaron:",e); }
 })();
-
-render();
-if("serviceWorker" in navigator){
-  window.addEventListener("load", ()=>navigator.serviceWorker.register("./sw.js"));
-}
 </script>
 </body>
 </html>
