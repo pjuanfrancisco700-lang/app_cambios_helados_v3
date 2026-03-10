@@ -26,8 +26,8 @@
       --radius-sm:16px;
     }
     *{box-sizing:border-box}
-    html{-webkit-text-size-adjust:100%;touch-action:manipulation;}
-    body{touch-action:manipulation;}
+    html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+    body{touch-action:manipulation}
     html,body{min-height:100%}
     body{
       margin:0;
@@ -81,7 +81,7 @@
     }
     .card.pad{padding:18px}
     .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .row > .left{min-width:0}
+    .row>.left{min-width:0}
     .chip{
       display:inline-flex;
       align-items:center;
@@ -96,7 +96,6 @@
       min-width:34px;
     }
     input[type="text"]{
-      touch-action:manipulation;
       width:100%;
       border:2px solid #d9dde5;
       background:#fff;
@@ -114,7 +113,6 @@
       box-shadow:0 0 0 4px rgba(47,123,139,.10);
     }
     button{
-      touch-action:manipulation;
       background:#fff;
       border:1px solid var(--border);
       border-radius:18px;
@@ -127,7 +125,7 @@
     }
     button:active{transform:scale(.985)}
     .list{
-      height:min(52svh, 460px);
+      height:min(52svh,460px);
       overflow-y:auto;
       overflow-x:hidden;
       overscroll-behavior:contain;
@@ -151,7 +149,7 @@
         grid-template-columns:minmax(0,1fr);
         align-items:flex-start;
       }
-      .item > .row{
+      .item>.row{
         width:100%;
         justify-content:flex-end;
       }
@@ -159,7 +157,7 @@
     .muted{color:var(--muted);font-size:12px;font-weight:500}
     .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .k{
-      background:linear-gradient(180deg,#fff 0%, #fcfbfd 100%);
+      background:linear-gradient(180deg,#fff 0%,#fcfbfd 100%);
       border:1px solid var(--border);
       border-radius:18px;
       padding:14px;
@@ -199,7 +197,7 @@
 <main>
   <section class="card pad">
     <div class="sub">Canal</div>
-    <button id="btnOpenCanal" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:20px;border:2px solid #d9dde5;background:#fff">
+    <button id="btnOpenCanal" type="button" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:20px;border:2px solid #d9dde5;background:#fff">
       <span id="canalActualLabel">Canal Detalle</span>
       <span class="muted" style="font-size:18px">▾</span>
     </button>
@@ -213,12 +211,12 @@
           <div class="title" style="font-size:18px">Seleccionar canal</div>
           <div class="sub">Toca una opción para cambiar precios.</div>
         </div>
-        <button id="btnCloseCanal">Cerrar</button>
+        <button id="btnCloseCanal" type="button">Cerrar</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="canal-option" data-canal="Canal Detalle" style="width:100%;text-align:left;padding:16px 18px">Canal Detalle</button>
-        <button class="canal-option" data-canal="Super 24" style="width:100%;text-align:left;padding:16px 18px">Super 24</button>
-        <button class="canal-option" data-canal="Cruz Verde" style="width:100%;text-align:left;padding:16px 18px">Cruz Verde</button>
+        <button class="canal-option" data-canal="Canal Detalle" type="button" style="width:100%;text-align:left;padding:16px 18px">Canal Detalle</button>
+        <button class="canal-option" data-canal="Super 24" type="button" style="width:100%;text-align:left;padding:16px 18px">Super 24</button>
+        <button class="canal-option" data-canal="Cruz Verde" type="button" style="width:100%;text-align:left;padding:16px 18px">Cruz Verde</button>
       </div>
     </div>
   </div>
@@ -226,8 +224,8 @@
   <section class="card pad">
     <div class="sub">Motivo del cambio</div>
     <div class="row" style="gap:8px;margin-top:6px">
-      <button data-motivo="50" class="apply motivo">Falta de energía eléctrica (50%)</button>
-      <button data-motivo="100" class="motivo">Falla del congelador (100%)</button>
+      <button data-motivo="50" class="apply motivo" type="button">Falta de energía eléctrica (50%)</button>
+      <button data-motivo="100" class="motivo" type="button">Falla del congelador (100%)</button>
     </div>
   </section>
 
@@ -242,7 +240,7 @@
   <section class="card pad">
     <div class="row">
       <div class="title" style="font-size:14px">Resumen</div>
-      <button id="btnClear">Limpiar</button>
+      <button id="btnClear" type="button">Limpiar</button>
     </div>
     <div id="cart" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
     <div class="kpi" style="margin-top:8px">
@@ -266,22 +264,14 @@
 <script>
 (function(){
   let lastTouchEnd = 0;
+  let ui = null;
 
   const Q = (n) => `Q${Number(n || 0).toFixed(2)}`;
 
   const PRECIOS_POR_CANAL = {
-    "Canal Detalle": {
-      // "Fresa": 4.5,
-      // "Guanaba": 4.5,
-    },
-    "Super 24": {
-      // "Fresa": 5.0,
-      // "Guanaba": 5.0,
-    },
-    "Cruz Verde": {
-      // "Fresa": 5.25,
-      // "Guanaba": 5.25,
-    }
+    "Canal Detalle": {},
+    "Super 24": {},
+    "Cruz Verde": {}
   };
 
   const base = [
@@ -299,7 +289,7 @@
     {name:"Mixta Barritas",price:0.0},{name:"Mixta Piñata",price:0.75},{name:"Cremosa Mandarina",price:3.0},
     {name:"Cremosa Uva",price:3.0},{name:"Cremosa Granadina",price:3.0},{name:"Cremosa Frambuesa",price:3.0},
     {name:"Cremosa Arandano",price:3.0},{name:"Twist Sipi Manzana Limon",price:3.75},{name:"Twist Sipi Punch Uva",price:3.75},
-    {name:"Morena Cookies And Cream",price:6.0},{name:"Morena Con Cajeta",price:6.0},
+    {name:"Morena Cookies And Cream",price:6.0},{name:"Morena Con Cajeta",price:6.0}
   ];
 
   let canal = "Canal Detalle";
@@ -315,50 +305,26 @@
   }
 
   function getSubtotal(){
-    return state.cart.reduce((a,it)=>a + getPrecio({ name: it.name, price: it.priceBase }) * it.qty, 0);
+    return state.cart.reduce((a, it) => a + getPrecio({ name: it.name, price: it.priceBase }) * it.qty, 0);
   }
 
   function filteredData(){
     const q = state.query.trim().toLowerCase();
-    const data = !q ? base : base.filter(x => x.name.toLowerCase().includes(q));
-    return data.map(item => ({ ...item, price: getPrecio(item) }));
+    const data = !q ? base : base.filter((x) => x.name.toLowerCase().includes(q));
+    return data.map((item) => ({ ...item, price: getPrecio(item) }));
   }
 
   function getQty(name){
-    const it = state.cart.find(p => p.name === name);
+    const it = state.cart.find((p) => p.name === name);
     return it ? it.qty : 0;
   }
 
-  function addItem(item, delta = 1){
-    const qty = Math.max(1, Number(delta) || 1);
-    const idx = state.cart.findIndex(p => p.name === item.name);
-    if(idx >= 0){
-      state.cart[idx].qty += qty;
-    }else{
-      state.cart.push({ name: item.name, priceBase: item.price, qty });
-    }
-    render();
-  }
-
-  function updateQty(name, delta){
-    const idx = state.cart.findIndex(p => p.name === name);
-    if(idx < 0) return;
-    state.cart[idx].qty = Math.max(0, state.cart[idx].qty + delta);
-    if(state.cart[idx].qty === 0) state.cart.splice(idx, 1);
-    render();
-  }
-
-  function removeItem(name){
-    const i = state.cart.findIndex(p => p.name === name);
-    if(i >= 0) state.cart.splice(i, 1);
-    render();
-  }
-
-  function renderList(els){
+  function renderList(){
+    if(!ui?.list) return;
     const data = filteredData();
-    els.list.innerHTML = "";
+    ui.list.innerHTML = "";
     if(data.length === 0){
-      els.list.innerHTML = `<div class="item"><div class="muted">No hay resultados…</div></div>`;
+      ui.list.innerHTML = '<div class="item"><div class="muted">No hay resultados…</div></div>';
       return;
     }
     for(const item of data){
@@ -376,14 +342,15 @@
           <button type="button" data-add="${item.name}">Agregar</button>
         </div>
       `;
-      els.list.appendChild(row);
+      ui.list.appendChild(row);
     }
   }
 
-  function renderCart(els){
-    els.cart.innerHTML = "";
+  function renderCart(){
+    if(!ui?.cart) return;
+    ui.cart.innerHTML = "";
     if(state.cart.length === 0){
-      els.cart.innerHTML = `<div class="muted">Aún no hay productos seleccionados.</div>`;
+      ui.cart.innerHTML = '<div class="muted">Aún no hay productos seleccionados.</div>';
       return;
     }
     for(const it of state.cart){
@@ -402,31 +369,134 @@
           <button type="button" class="danger" data-remove="${it.name}">Quitar</button>
         </div>
       `;
-      els.cart.appendChild(row);
+      ui.cart.appendChild(row);
     }
   }
 
-  function renderTotals(els){
+  function renderTotals(){
     const subtotal = getSubtotal();
     const aplicar = subtotal * (motivo.factor || 1);
-    if(els.subtotal) els.subtotal.textContent = Q(subtotal);
-    if(els.aplicar) els.aplicar.textContent = Q(aplicar);
-    if(els.motivoLabel) els.motivoLabel.textContent = motivo.label;
-    if(els.motivoPct) els.motivoPct.textContent = Math.round((motivo.factor || 0) * 100);
-    if(els.canalActualLabel) els.canalActualLabel.textContent = canal;
-    document.querySelectorAll('.canal-option').forEach(btn => {
+    if(ui?.subtotal) ui.subtotal.textContent = Q(subtotal);
+    if(ui?.aplicar) ui.aplicar.textContent = Q(aplicar);
+    if(ui?.motivoLabel) ui.motivoLabel.textContent = motivo.label;
+    if(ui?.motivoPct) ui.motivoPct.textContent = String(Math.round((motivo.factor || 0) * 100));
+    if(ui?.canalActualLabel) ui.canalActualLabel.textContent = canal;
+    document.querySelectorAll('.canal-option').forEach((btn) => {
       btn.classList.toggle('apply', btn.dataset.canal === canal);
     });
   }
 
-  function render(els){
-    renderList(els);
-    renderCart(els);
-    renderTotals(els);
+  function render(){
+    if(!ui) return;
+    renderList();
+    renderCart();
+    renderTotals();
+  }
+
+  function addItem(item, delta = 1){
+    const qty = Math.max(1, Number(delta) || 1);
+    const idx = state.cart.findIndex((p) => p.name === item.name);
+    if(idx >= 0){
+      state.cart[idx].qty += qty;
+    }else{
+      state.cart.push({ name: item.name, priceBase: item.price, qty });
+    }
+    render();
+  }
+
+  function updateQty(name, delta){
+    const idx = state.cart.findIndex((p) => p.name === name);
+    if(idx < 0) return;
+    state.cart[idx].qty = Math.max(0, state.cart[idx].qty + delta);
+    if(state.cart[idx].qty === 0) state.cart.splice(idx, 1);
+    render();
+  }
+
+  function removeItem(name){
+    const i = state.cart.findIndex((p) => p.name === name);
+    if(i >= 0) state.cart.splice(i, 1);
+    render();
   }
 
   function getBaseItemByName(name){
-    return base.find(item => item.name === name) || null;
+    return base.find((item) => item.name === name) || null;
+  }
+
+  function requiredElementsPresent(){
+    return Boolean(
+      ui?.list && ui?.search && ui?.cart && ui?.subtotal && ui?.aplicar &&
+      ui?.motivoLabel && ui?.motivoPct && ui?.btnClear && ui?.btnOpenCanal &&
+      ui?.btnCloseCanal && ui?.canalModal && ui?.canalActualLabel
+    );
+  }
+
+  function bindEvents(){
+    ui.search.addEventListener("input", (e) => {
+      state.query = e.target.value;
+      renderList();
+    });
+
+    ui.btnClear.addEventListener("click", () => {
+      state.cart = [];
+      render();
+    });
+
+    document.querySelectorAll(".motivo").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".motivo").forEach((b) => b.classList.remove("apply"));
+        btn.classList.add("apply");
+        motivo = btn.dataset.motivo === "50"
+          ? { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 }
+          : { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
+        renderTotals();
+      });
+    });
+
+    ui.btnOpenCanal.addEventListener("click", () => {
+      ui.canalModal.classList.remove("hidden");
+    });
+
+    ui.btnCloseCanal.addEventListener("click", () => {
+      ui.canalModal.classList.add("hidden");
+    });
+
+    ui.canalModal.addEventListener("click", (e) => {
+      if(e.target === ui.canalModal){
+        ui.canalModal.classList.add("hidden");
+      }
+    });
+
+    document.querySelectorAll(".canal-option").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        canal = btn.dataset.canal;
+        ui.canalModal.classList.add("hidden");
+        render();
+      });
+    });
+
+    ui.list.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-add]");
+      if(!btn) return;
+      const item = getBaseItemByName(btn.dataset.add);
+      if(item) addItem(item, 1);
+    });
+
+    ui.cart.addEventListener("click", (e) => {
+      const decBtn = e.target.closest("button[data-dec]");
+      if(decBtn){
+        updateQty(decBtn.dataset.dec, -1);
+        return;
+      }
+      const incBtn = e.target.closest("button[data-inc]");
+      if(incBtn){
+        updateQty(incBtn.dataset.inc, 1);
+        return;
+      }
+      const removeBtn = e.target.closest("button[data-remove]");
+      if(removeBtn){
+        removeItem(removeBtn.dataset.remove);
+      }
+    });
   }
 
   function runLightTests(){
@@ -454,13 +524,22 @@
       console.assert(getQty("Fresa") === 0, "Debe quitar Fresa del carrito");
 
       state.query = "mango";
-      console.assert(filteredData().some(x => x.name.toLowerCase().includes("mango")), "El filtro debe devolver productos con mango");
+      console.assert(filteredData().some((x) => x.name.toLowerCase().includes("mango")), "El filtro debe devolver productos con mango");
+      state.query = "xyz-no-existe";
+      console.assert(filteredData().length === 0, "Un filtro inexistente debe devolver 0 resultados");
       state.query = "";
 
       canal = "Canal Detalle";
       console.assert(getPrecio({ name:"Fresa", price:4.5 }) === 4.5, "Precio base debe mantenerse cuando no hay override");
+      console.assert(requiredElementsPresent() === true, "Los elementos del DOM requeridos deben existir");
 
       state.cart = [];
+      motivo = { key:"100", label:"Falla del congelador (100%)", factor:1 };
+      addItem({ name:"Cholapiz", price:1.87 }, 2);
+      console.assert(Math.abs(getSubtotal() - 3.74) < 1e-9, "Subtotal con Cholapiz debe ser 3.74");
+      state.cart = [];
+      motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
+
       console.debug("Tests ligeros OK");
     }catch(e){
       console.warn("Tests ligeros fallaron:", e);
@@ -476,7 +555,7 @@
       lastTouchEnd = now;
     }, { passive:false });
 
-    const els = {
+    ui = {
       list: document.getElementById("list"),
       search: document.getElementById("search"),
       cart: document.getElementById("cart"),
@@ -488,92 +567,16 @@
       btnOpenCanal: document.getElementById("btnOpenCanal"),
       btnCloseCanal: document.getElementById("btnCloseCanal"),
       canalModal: document.getElementById("canalModal"),
-      canalActualLabel: document.getElementById("canalActualLabel"),
+      canalActualLabel: document.getElementById("canalActualLabel")
     };
 
-    if(!els.list || !els.search || !els.cart || !els.subtotal || !els.aplicar || !els.motivoLabel || !els.motivoPct || !els.btnClear || !els.btnOpenCanal || !els.btnCloseCanal || !els.canalModal || !els.canalActualLabel){
+    if(!requiredElementsPresent()){
       console.error("Faltan elementos del DOM requeridos para iniciar la app.");
       return;
     }
 
-    window.addItem = addItem;
-    window.updateQty = updateQty;
-    window.removeItem = removeItem;
-
-    els.search.addEventListener("input", (e) => {
-      state.query = e.target.value;
-      renderList(els);
-    });
-
-    els.btnClear.addEventListener("click", () => {
-      state.cart = [];
-      render(els);
-    });
-
-    document.querySelectorAll(".motivo").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".motivo").forEach(b => b.classList.remove("apply"));
-        btn.classList.add("apply");
-        if(btn.dataset.motivo === "50"){
-          motivo = { key:"50", label:"Falta de energía eléctrica (50%)", factor:0.5 };
-        }else{
-          motivo = { key:"100", label:"Falla del congelador (100%)", factor:1.0 };
-        }
-        renderTotals(els);
-      });
-    });
-
-    els.btnOpenCanal.addEventListener("click", () => {
-      els.canalModal.classList.remove("hidden");
-    });
-
-    els.btnCloseCanal.addEventListener("click", () => {
-      els.canalModal.classList.add("hidden");
-    });
-
-    els.canalModal.addEventListener("click", (e) => {
-      if(e.target === els.canalModal){
-        els.canalModal.classList.add("hidden");
-      }
-    });
-
-    document.querySelectorAll(".canal-option").forEach(btn => {
-      btn.addEventListener("click", () => {
-        canal = btn.dataset.canal;
-        els.canalModal.classList.add("hidden");
-        render(els);
-      });
-    });
-
-    els.list.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-add]");
-      if(!btn) return;
-      const item = getBaseItemByName(btn.dataset.add);
-      if(item) addItem(item, 1);
-      render(els);
-    });
-
-    els.cart.addEventListener("click", (e) => {
-      const decBtn = e.target.closest("button[data-dec]");
-      if(decBtn){
-        updateQty(decBtn.dataset.dec, -1);
-        render(els);
-        return;
-      }
-      const incBtn = e.target.closest("button[data-inc]");
-      if(incBtn){
-        updateQty(incBtn.dataset.inc, 1);
-        render(els);
-        return;
-      }
-      const removeBtn = e.target.closest("button[data-remove]");
-      if(removeBtn){
-        removeItem(removeBtn.dataset.remove);
-        render(els);
-      }
-    });
-
-    render(els);
+    bindEvents();
+    render();
     runLightTests();
 
     if("serviceWorker" in navigator){
